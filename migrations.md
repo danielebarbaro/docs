@@ -15,6 +15,7 @@
     - [Dropping Columns](#dropping-columns)
 - [Indexes](#indexes)
     - [Creating Indexes](#creating-indexes)
+    - [Renaming Indexes](#renaming-indexes)
     - [Dropping Indexes](#dropping-indexes)
     - [Foreign Key Constraints](#foreign-key-constraints)
 
@@ -34,7 +35,7 @@ To create a migration, use the `make:migration` [Artisan command](/docs/{{versio
 
 The new migration will be placed in your `database/migrations` directory. Each migration file name contains a timestamp which allows Laravel to determine the order of the migrations.
 
-The `--table` and `--create` options may also be used to indicate the name of the table and whether the migration will be creating a new table. These options simply pre-fill the generated migration stub file with the specified table:
+The `--table` and `--create` options may also be used to indicate the name of the table and whether the migration will be creating a new table. These options pre-fill the generated migration stub file with the specified table:
 
     php artisan make:migration create_users_table --create=users
 
@@ -45,7 +46,7 @@ If you would like to specify a custom output path for the generated migration, y
 <a name="migration-structure"></a>
 ## Migration Structure
 
-A migration class contains two methods: `up` and `down`. The `up` method is used to add new tables, columns, or indexes to your database, while the `down` method should simply reverse the operations performed by the `up` method.
+A migration class contains two methods: `up` and `down`. The `up` method is used to add new tables, columns, or indexes to your database, while the `down` method should reverse the operations performed by the `up` method.
 
 Within both of these methods you may use the Laravel schema builder to expressively create and modify tables. To learn about all of the methods available on the `Schema` builder, [check out its documentation](#creating-tables). For example, this migration example creates a `flights` table:
 
@@ -146,7 +147,7 @@ To create a new database table, use the `create` method on the `Schema` facade. 
         $table->increments('id');
     });
 
-Of course, when creating the table, you may use any of the schema builder's [column methods](#creating-columns) to define the table's columns.
+When creating the table, you may use any of the schema builder's [column methods](#creating-columns) to define the table's columns.
 
 #### Checking For Table / Column Existence
 
@@ -208,7 +209,7 @@ The `table` method on the `Schema` facade may be used to update existing tables.
 
 #### Available Column Types
 
-Of course, the schema builder contains a variety of column types that you may specify when building your tables:
+The schema builder contains a variety of column types that you may specify when building your tables:
 
 Command  |  Description
 -------  |  -----------
@@ -237,7 +238,7 @@ Command  |  Description
 `$table->mediumIncrements('id');`  |  Auto-incrementing UNSIGNED MEDIUMINT (primary key) equivalent column.
 `$table->mediumInteger('votes');`  |  MEDIUMINT equivalent column.
 `$table->mediumText('description');`  |  MEDIUMTEXT equivalent column.
-`$table->morphs('taggable');`  |  Adds `taggable_id` UNSIGNED INTEGER and `taggable_type` VARCHAR equivalent columns.
+`$table->morphs('taggable');`  |  Adds `taggable_id` UNSIGNED BIGINT and `taggable_type` VARCHAR equivalent columns.
 `$table->multiLineString('positions');`  |  MULTILINESTRING equivalent column.
 `$table->multiPoint('positions');`  |  MULTIPOINT equivalent column.
 `$table->multiPolygon('positions');`  |  MULTIPOLYGON equivalent column.
@@ -267,6 +268,7 @@ Command  |  Description
 `$table->unsignedSmallInteger('votes');`  |  UNSIGNED SMALLINT equivalent column.
 `$table->unsignedTinyInteger('votes');`  |  UNSIGNED TINYINT equivalent column.
 `$table->uuid('id');`  |  UUID equivalent column.
+`$table->year('birth_year');`  |  YEAR equivalent column.
 
 <a name="column-modifiers"></a>
 ### Column Modifiers
@@ -285,7 +287,7 @@ Modifier  |  Description
 `->autoIncrement()`  |  Set INTEGER columns as auto-increment (primary key)
 `->charset('utf8')`  |  Specify a character set for the column (MySQL)
 `->collation('utf8_unicode_ci')`  |  Specify a collation for the column (MySQL/SQL Server)
-`->comment('my comment')`  |  Add a comment to a column (MySQL)
+`->comment('my comment')`  |  Add a comment to a column (MySQL/PostgreSQL)
 `->default($value)`  |  Specify a "default" value for the column
 `->first()`  |  Place the column "first" in the table (MySQL)
 `->nullable($value = true)`  |  Allows (by default) NULL values to be inserted into the column
@@ -293,6 +295,8 @@ Modifier  |  Description
 `->unsigned()`  |  Set INTEGER columns as UNSIGNED (MySQL)
 `->useCurrent()`  |  Set TIMESTAMP columns to use CURRENT_TIMESTAMP as default value
 `->virtualAs($expression)`  |  Create a virtual generated column (MySQL)
+`->generatedAs($expression)`  |  Create an identity column with specified sequence options (PostgreSQL)
+`->always()`  |  Defines the precedence of sequence values over input for an identity column (PostgreSQL)
 
 <a name="modifying-columns"></a>
 ### Modifying Columns
@@ -362,7 +366,7 @@ Command  |  Description
 <a name="creating-indexes"></a>
 ### Creating Indexes
 
-The schema builder supports several types of indexes. First, let's look at an example that specifies a column's values should be unique. To create the index, we can simply chain the `unique` method onto the column definition:
+The schema builder supports several types of indexes. First, let's look at an example that specifies a column's values should be unique. To create the index, we can chain the `unique` method onto the column definition:
 
     $table->string('email')->unique();
 
@@ -379,6 +383,8 @@ Laravel will automatically generate a reasonable index name, but you may pass a 
     $table->unique('email', 'unique_email');
 
 #### Available Index Types
+
+Each index method accepts an optional second argument to specify the name of the index. If omitted, the name will be derived from the names of the table and column(s).
 
 Command  |  Description
 -------  |  -----------
@@ -406,10 +412,17 @@ Laravel uses the `utf8mb4` character set by default, which includes support for 
 
 Alternatively, you may enable the `innodb_large_prefix` option for your database. Refer to your database's documentation for instructions on how to properly enable this option.
 
+<a name="renaming-indexes"></a>
+### Renaming Indexes
+
+To rename an index, you may use the `renameIndex` method. This method accepts the current index name as its first argument and the desired name as its second argument:
+
+    $table->renameIndex('from', 'to')
+
 <a name="dropping-indexes"></a>
 ### Dropping Indexes
 
-To drop an index, you must specify the index's name. By default, Laravel automatically assigns a reasonable name to the indexes. Simply concatenate the table name, the name of the indexed column, and the index type. Here are some examples:
+To drop an index, you must specify the index's name. By default, Laravel automatically assigns a reasonable name to the indexes. Concatenate the table name, the name of the indexed column, and the index type. Here are some examples:
 
 Command  |  Description
 -------  |  -----------
@@ -430,7 +443,7 @@ If you pass an array of columns into a method that drops indexes, the convention
 Laravel also provides support for creating foreign key constraints, which are used to force referential integrity at the database level. For example, let's define a `user_id` column on the `posts` table that references the `id` column on a `users` table:
 
     Schema::table('posts', function (Blueprint $table) {
-        $table->integer('user_id')->unsigned();
+        $table->unsignedInteger('user_id');
 
         $table->foreign('user_id')->references('id')->on('users');
     });
@@ -441,7 +454,7 @@ You may also specify the desired action for the "on delete" and "on update" prop
           ->references('id')->on('users')
           ->onDelete('cascade');
 
-To drop a foreign key, you may use the `dropForeign` method. Foreign key constraints use the same naming convention as indexes. So, we will concatenate the table name and the columns in the constraint then suffix the name with "_foreign":
+To drop a foreign key, you may use the `dropForeign` method. Foreign key constraints use the same naming convention as indexes. So, we will concatenate the table name and the columns in the constraint then suffix the name with "\_foreign":
 
     $table->dropForeign('posts_user_id_foreign');
 
@@ -454,3 +467,5 @@ You may enable or disable foreign key constraints within your migrations by usin
     Schema::enableForeignKeyConstraints();
 
     Schema::disableForeignKeyConstraints();
+
+> {note} SQLite disables foreign key constraints by default. When using SQLite, make sure to [enable foreign key support](/docs/{{version}}/database#configuration) in your database configuration before attempting to create them in your migrations.

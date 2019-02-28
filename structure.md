@@ -13,6 +13,7 @@
     - [The `tests` Directory](#the-tests-directory)
     - [The `vendor` Directory](#the-vendor-directory)
 - [The App Directory](#the-app-directory)
+    - [The `Broadcasting` Directory](#the-broadcasting-directory)
     - [The `Console` Directory](#the-console-directory)
     - [The `Events` Directory](#the-events-directory)
     - [The `Exceptions` Directory](#the-exceptions-directory)
@@ -28,7 +29,7 @@
 <a name="introduction"></a>
 ## Introduction
 
-The default Laravel application structure is intended to provide a great starting point for both large and small applications. Of course, you are free to organize your application however you like. Laravel imposes almost no restrictions on where any given class is located - as long as Composer can autoload the class.
+The default Laravel application structure is intended to provide a great starting point for both large and small applications. But you are free to organize your application however you like. Laravel imposes almost no restrictions on where any given class is located - as long as Composer can autoload the class.
 
 #### Where Is The Models Directory?
 
@@ -42,7 +43,7 @@ For this reason, we choose to place Eloquent models in the `app` directory by de
 <a name="the-root-app-directory"></a>
 #### The App Directory
 
-The `app` directory, as you might expect, contains the core code of your application. We'll explore this directory in more detail soon; however, almost all of the classes in your application will be in this directory.
+The `app` directory contains the core code of your application. We'll explore this directory in more detail soon; however, almost all of the classes in your application will be in this directory.
 
 <a name="the-bootstrap-directory"></a>
 #### The Bootstrap Directory
@@ -57,7 +58,7 @@ The `config` directory, as the name implies, contains all of your application's 
 <a name="the-database-directory"></a>
 #### The Database Directory
 
-The `database` directory contains your database migration and seeds. If you wish, you may also use this directory to hold an SQLite database.
+The `database` directory contains your database migrations, model factories, and seeds. If you wish, you may also use this directory to hold an SQLite database.
 
 <a name="the-public-directory"></a>
 #### The Public Directory
@@ -92,7 +93,7 @@ The `storage/app/public` directory may be used to store user-generated files, su
 <a name="the-tests-directory"></a>
 #### The Tests Directory
 
-The `tests` directory contains your automated tests. An example [PHPUnit](https://phpunit.de/) is provided out of the box. Each test class should be suffixed with the word `Test`. You may run your tests using the `phpunit` or `php vendor/bin/phpunit` commands.
+The `tests` directory contains your automated tests. An example [PHPUnit](https://phpunit.de/) test is provided out of the box. Each test class should be suffixed with the word `Test`. You may run your tests using the `phpunit` or `php vendor/bin/phpunit` commands.
 
 <a name="the-vendor-directory"></a>
 #### The Vendor Directory
@@ -102,13 +103,18 @@ The `vendor` directory contains your [Composer](https://getcomposer.org) depende
 <a name="the-app-directory"></a>
 ## The App Directory
 
-The majority of your application is housed in the `app` directory. By default, this directory is namespaced under `App` and is autoloaded by Composer using the [PSR-4 autoloading standard](http://www.php-fig.org/psr/psr-4/).
+The majority of your application is housed in the `app` directory. By default, this directory is namespaced under `App` and is autoloaded by Composer using the [PSR-4 autoloading standard](https://www.php-fig.org/psr/psr-4/).
 
-The `app` directory contains a variety of additional directories such as `Console`, `Http`, and `Providers`. Think of the `Console` and `Http` directories as providing an API into the core of your application. The HTTP protocol and CLI are both mechanisms to interact with your application, but do not actually contain application logic. In other words, they are simply two ways of issuing commands to your application. The `Console` directory contains all of your Artisan commands, while the `Http` directory contains your controllers, middleware, and requests.
+The `app` directory contains a variety of additional directories such as `Console`, `Http`, and `Providers`. Think of the `Console` and `Http` directories as providing an API into the core of your application. The HTTP protocol and CLI are both mechanisms to interact with your application, but do not actually contain application logic. In other words, they are two ways of issuing commands to your application. The `Console` directory contains all of your Artisan commands, while the `Http` directory contains your controllers, middleware, and requests.
 
 A variety of other directories will be generated inside the `app` directory as you use the `make` Artisan commands to generate classes. So, for example, the `app/Jobs` directory will not exist until you execute the `make:job` Artisan command to generate a job class.
 
 > {tip} Many of the classes in the `app` directory can be generated by Artisan via commands. To review the available commands, run the `php artisan list make` command in your terminal.
+
+<a name="the-broadcasting-directory"></a>
+#### The Broadcasting Directory
+
+The `Broadcasting` directory contains all of the broadcast channel classes for your application. These classes are generated using the `make:channel` command. This directory does not exist by default, but will be created for you when you create your first channel. To learn more about channels, check out the documentation on [event broadcasting](/docs/{{version}}/broadcasting).
 
 <a name="the-console-directory"></a>
 #### The Console Directory
@@ -118,7 +124,7 @@ The `Console` directory contains all of the custom Artisan commands for your app
 <a name="the-events-directory"></a>
 #### The Events Directory
 
-This directory does not exist by default, but will be created for you by the `event:generate` and `make:event` Artisan commands. The `Events` directory, as you might expect, houses [event classes](/docs/{{version}}/events). Events may be used to alert other parts of your application that a given action has occurred, providing a great deal of flexibility and decoupling.
+This directory does not exist by default, but will be created for you by the `event:generate` and `make:event` Artisan commands. The `Events` directory houses [event classes](/docs/{{version}}/events). Events may be used to alert other parts of your application that a given action has occurred, providing a great deal of flexibility and decoupling.
 
 <a name="the-exceptions-directory"></a>
 #### The Exceptions Directory

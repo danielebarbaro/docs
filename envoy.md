@@ -1,4 +1,4 @@
-# Envoy Task Runner
+# Laravel Envoy
 
 - [Introduction](#introduction)
     - [Installation](#installation)
@@ -11,6 +11,7 @@
     - [Confirming Task Execution](#confirming-task-execution)
 - [Notifications](#notifications)
     - [Slack](#slack)
+    - [Discord](#discord)
 
 <a name="introduction"></a>
 ## Introduction
@@ -54,7 +55,7 @@ You can force a script to run locally by specifying the server's IP address as `
 <a name="setup"></a>
 ### Setup
 
-Sometimes, you may need to execute some PHP code before executing your Envoy tasks. You may use the ```@setup``` directive to declare variables and do other general PHP work before any of your other tasks are executed:
+Sometimes, you may need to execute some PHP code before executing your Envoy tasks. You may use the `@setup` directive to declare variables and do other general PHP work before any of your other tasks are executed:
 
     @setup
         $now = new DateTime();
@@ -77,7 +78,7 @@ If needed, you may pass option values into Envoy tasks using the command line:
 
     envoy run deploy --branch=master
 
-You may access the options in your tasks via Blade's "echo" syntax. Of course, you may also use `if` statements and loops within your tasks. For example, let's verify the presence of the `$branch` variable before executing the `git pull` command:
+You may access the options in your tasks via Blade's "echo" syntax. You may also use `if` statements and loops within your tasks. For example, let's verify the presence of the `$branch` variable before executing the `git pull` command:
 
     @servers(['web' => '192.168.1.1'])
 
@@ -159,7 +160,6 @@ If you would like to be prompted for confirmation before running a given task on
     @endtask
 
 <a name="notifications"></a>
-<a name="hipchat-notifications"></a>
 ## Notifications
 
 <a name="slack"></a>
@@ -178,3 +178,11 @@ You may provide one of the following as the channel argument:
 - To send the notification to a user: `@user`
 </div>
 
+<a name="discord"></a>
+### Discord
+
+Envoy also supports sending notifications to [Discord](https://discord.com) after each task is executed. The `@discord` directive accepts a Discord hook URL and a message. You may retreive your webhook URL by creating a "Webhook" in your Server Settings and choosing which channel the webhook should post to. You should pass the entire Webhook URL into the `@discord` directive:
+
+    @finished
+        @discord('discord-webhook-url')
+    @endfinished

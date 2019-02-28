@@ -10,22 +10,25 @@
 <a name="installation"></a>
 ## Installation
 
-> {video} Are you a visual learner? Laracasts provides a [free, thorough introduction to Laravel](http://laravelfromscratch.com) for newcomers to the framework. It's a great place to start your journey.
+> {video} Laracasts provides a [free, thorough introduction to Laravel](http://laravelfromscratch.com) for newcomers to the framework. It's a great place to start your journey.
 
 <a name="server-requirements"></a>
 ### Server Requirements
 
-The Laravel framework has a few system requirements. Of course, all of these requirements are satisfied by the [Laravel Homestead](/docs/{{version}}/homestead) virtual machine, so it's highly recommended that you use Homestead as your local Laravel development environment.
+The Laravel framework has a few system requirements. All of these requirements are satisfied by the [Laravel Homestead](/docs/{{version}}/homestead) virtual machine, so it's highly recommended that you use Homestead as your local Laravel development environment.
 
 However, if you are not using Homestead, you will need to make sure your server meets the following requirements:
 
 <div class="content-list" markdown="1">
-- PHP >= 7.0.0
+- PHP >= 7.1.3
 - OpenSSL PHP Extension
 - PDO PHP Extension
 - Mbstring PHP Extension
 - Tokenizer PHP Extension
 - XML PHP Extension
+- Ctype PHP Extension
+- JSON PHP Extension
+- BCMath PHP Extension
 </div>
 
 <a name="installing-laravel"></a>
@@ -37,13 +40,14 @@ Laravel utilizes [Composer](https://getcomposer.org) to manage its dependencies.
 
 First, download the Laravel installer using Composer:
 
-    composer global require "laravel/installer"
+    composer global require laravel/installer
 
 Make sure to place composer's system-wide vendor bin directory in your `$PATH` so the laravel executable can be located by your system. This directory exists in different locations based on your operating system; however, some common locations include:
 
 <div class="content-list" markdown="1">
-- MacOS: `$HOME/.composer/vendor/bin`
+- macOS: `$HOME/.composer/vendor/bin`
 - GNU / Linux Distributions: `$HOME/.config/composer/vendor/bin`
+- Windows: `%USERPROFILE%\AppData\Roaming\Composer\vendor\bin`
 </div>
 
 Once installed, the `laravel new` command will create a fresh Laravel installation in the directory you specify. For instance, `laravel new blog` will create a directory named `blog` containing a fresh Laravel installation with all of Laravel's dependencies already installed:
@@ -62,7 +66,7 @@ If you have PHP installed locally and you would like to use PHP's built-in devel
 
     php artisan serve
 
-Of course, more robust local development options are available via [Homestead](/docs/{{version}}/homestead) and [Valet](/docs/{{version}}/valet).
+More robust local development options are available via [Homestead](/docs/{{version}}/homestead) and [Valet](/docs/{{version}}/valet).
 
 <a name="configuration"></a>
 ### Configuration
@@ -109,8 +113,11 @@ Laravel includes a `public/.htaccess` file that is used to provide URLs without 
 
 If the `.htaccess` file that ships with Laravel does not work with your Apache installation, try this alternative:
 
-    Options +FollowSymLinks
+    Options +FollowSymLinks -Indexes
     RewriteEngine On
+
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
@@ -124,4 +131,4 @@ If you are using Nginx, the following directive in your site configuration will 
         try_files $uri $uri/ /index.php?$query_string;
     }
 
-Of course, when using [Homestead](/docs/{{version}}/homestead) or [Valet](/docs/{{version}}/valet), pretty URLs will be automatically configured.
+When using [Homestead](/docs/{{version}}/homestead) or [Valet](/docs/{{version}}/valet), pretty URLs will be automatically configured.

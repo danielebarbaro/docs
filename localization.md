@@ -1,6 +1,7 @@
 # Localization
 
 - [Introduction](#introduction)
+    - [Configuring The Locale](#configuring-the-locale)
 - [Defining Translation Strings](#defining-translation-strings)
     - [Using Short Keys](#using-short-keys)
     - [Using Translation Strings As Keys](#using-translation-strings-as-keys)
@@ -21,7 +22,7 @@ Laravel's localization features provide a convenient way to retrieve strings in 
             /es
                 messages.php
 
-All language files simply return an array of keyed strings. For example:
+All language files return an array of keyed strings. For example:
 
     <?php
 
@@ -29,9 +30,10 @@ All language files simply return an array of keyed strings. For example:
         'welcome' => 'Welcome to our application'
     ];
 
+<a name="configuring-the-locale"></a>
 ### Configuring The Locale
 
-The default language for your application is stored in the `config/app.php` configuration file. Of course, you may modify this value to suit the needs of your application. You may also change the active language at runtime using the `setLocale` method on the `App` facade:
+The default language for your application is stored in the `config/app.php` configuration file. You may modify this value to suit the needs of your application. You may also change the active language at runtime using the `setLocale` method on the `App` facade:
 
     Route::get('welcome/{locale}', function ($locale) {
         App::setLocale($locale);
@@ -68,7 +70,7 @@ Typically, translation strings are stored in files within the `resources/lang` d
             /es
                 messages.php
 
-All language files simply return an array of keyed strings. For example:
+All language files return an array of keyed strings. For example:
 
     <?php
 
@@ -98,30 +100,31 @@ You may retrieve lines from language files using the `__` helper function. The `
 
     echo __('I love programming.');
 
-Of course if you are using the [Blade templating engine](/docs/{{version}}/blade), you may use the `{{ }}` syntax to echo the translation string or use the `@lang` directive:
+If you are using the [Blade templating engine](/docs/{{version}}/blade), you may use the `{{ }}` syntax to echo the translation string or use the `@lang` directive:
 
     {{ __('messages.welcome') }}
 
     @lang('messages.welcome')
 
-If the specified translation string does not exist, the `__` function will simply return the translation string key. So, using the example above, the `__` function would return `messages.welcome` if the translation string does not exist.
+If the specified translation string does not exist, the `__` function will return the translation string key. So, using the example above, the `__` function would return `messages.welcome` if the translation string does not exist.
+
+> {note} The `@lang` directive does not escape any output. You are **fully responsible** for escaping your own output when using this directive.
 
 <a name="replacing-parameters-in-translation-strings"></a>
 ### Replacing Parameters In Translation Strings
 
-If you wish, you may define place-holders in your translation strings. All place-holders are prefixed with a `:`. For example, you may define a welcome message with a place-holder name:
+If you wish, you may define placeholders in your translation strings. All placeholders are prefixed with a `:`. For example, you may define a welcome message with a placeholder name:
 
     'welcome' => 'Welcome, :name',
 
-To replace the place-holders when retrieving a translation string, pass an array of replacements as the second argument to the `__` function:
+To replace the placeholders when retrieving a translation string, pass an array of replacements as the second argument to the `__` function:
 
     echo __('messages.welcome', ['name' => 'dayle']);
 
-If your place-holder contains all capital letters, or only has its first letter capitalized, the translated value will be capitalized accordingly:
+If your placeholder contains all capital letters, or only has its first letter capitalized, the translated value will be capitalized accordingly:
 
     'welcome' => 'Welcome, :NAME', // Welcome, DAYLE
     'goodbye' => 'Goodbye, :Name', // Goodbye, Dayle
-
 
 <a name="pluralization"></a>
 ### Pluralization
@@ -137,6 +140,16 @@ You may even create more complex pluralization rules which specify translation s
 After defining a translation string that has pluralization options, you may use the `trans_choice` function to retrieve the line for a given "count". In this example, since the count is greater than one, the plural form of the translation string is returned:
 
     echo trans_choice('messages.apples', 10);
+
+You may also define placeholder attributes in pluralization strings. These placeholders may be replaced by passing an array as the third argument to the `trans_choice` function:
+
+    'minutes_ago' => '{1} :value minute ago|[2,*] :value minutes ago',
+
+    echo trans_choice('time.minutes_ago', 5, ['value' => 5]);
+
+If you would like to display the integer value that was passed to the `trans_choice` function, you may use the `:count` placeholder:
+
+    'apples' => '{0} There are none|{1} There is one|[2,*] There are :count',
 
 <a name="overriding-package-language-files"></a>
 ## Overriding Package Language Files

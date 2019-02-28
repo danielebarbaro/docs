@@ -118,7 +118,7 @@ The `method` method will return the HTTP verb for the request. You may use the `
 <a name="psr7-requests"></a>
 ### PSR-7 Requests
 
-The [PSR-7 standard](http://www.php-fig.org/psr/psr-7/) specifies interfaces for HTTP messages, including requests and responses. If you would like to obtain an instance of a PSR-7 request instead of a Laravel request, you will first need to install a few libraries. Laravel uses the *Symfony HTTP Message Bridge* component to convert typical Laravel requests and responses into PSR-7 compatible implementations:
+The [PSR-7 standard](https://www.php-fig.org/psr/psr-7/) specifies interfaces for HTTP messages, including requests and responses. If you would like to obtain an instance of a PSR-7 request instead of a Laravel request, you will first need to install a few libraries. Laravel uses the *Symfony HTTP Message Bridge* component to convert typical Laravel requests and responses into PSR-7 compatible implementations:
 
     composer require symfony/psr-http-message-bridge
     composer require zendframework/zend-diactoros
@@ -165,6 +165,10 @@ When working with forms that contain array inputs, use "dot" notation to access 
 
     $names = $request->input('products.*.name');
 
+You may call the `input` method without any arguments in order to retrieve all of the input values as an associative array:
+
+    $input = $request->input();
+
 #### Retrieving Input From The Query String
 
 While the `input` method retrieves values from entire request payload (including the query string), the `query` method will only retrieve values from the query string:
@@ -205,7 +209,7 @@ If you need to retrieve a subset of the input data, you may use the `only` and `
 
     $input = $request->except('credit_card');
 
-> {tip} The `only` method returns all of the key / value pairs that you request; however, it will not return key / values pairs that are not present on the request.
+> {tip} The `only` method returns all of the key / value pairs that you request; however, it will not return key / value pairs that are not present on the request.
 
 #### Determining If An Input Value Is Present
 
@@ -341,7 +345,7 @@ The `UploadedFile` class also contains methods for accessing the file's fully-qu
 
 #### Other File Methods
 
-There are a variety of other methods available on `UploadedFile` instances. Check out the [API documentation for the class](http://api.symfony.com/3.0/Symfony/Component/HttpFoundation/File/UploadedFile.html) for more information regarding these methods.
+There are a variety of other methods available on `UploadedFile` instances. Check out the [API documentation for the class](https://api.symfony.com/3.0/Symfony/Component/HttpFoundation/File/UploadedFile.html) for more information regarding these methods.
 
 <a name="storing-uploaded-files"></a>
 ### Storing Uploaded Files
@@ -367,7 +371,7 @@ If you do not want a file name to be automatically generated, you may use the `s
 
 When running your applications behind a load balancer that terminates TLS / SSL certificates, you may notice your application sometimes does not generate HTTPS links. Typically this is because your application is being forwarded traffic from your load balancer on port 80 and does not know it should generate secure links.
 
-To solve this, you may use the `App\Http\Middleware\TrustProxies` middleware that is included in your Laravel application, which allows you to quickly customize the load balancers or proxies that should be trusted by your application. Your trusted proxies should be listed as an array on the `$proxies` property of this middleware. In addition to configuring the trusted proxies, you may configure the headers that are being sent by your proxy with information about the original request:
+To solve this, you may use the `App\Http\Middleware\TrustProxies` middleware that is included in your Laravel application, which allows you to quickly customize the load balancers or proxies that should be trusted by your application. Your trusted proxies should be listed as an array on the `$proxies` property of this middleware. In addition to configuring the trusted proxies, you may configure the proxy `$headers` that should be trusted:
 
     <?php
 
@@ -389,26 +393,22 @@ To solve this, you may use the `App\Http\Middleware\TrustProxies` middleware tha
         ];
 
         /**
-         * The current proxy header mappings.
+         * The headers that should be used to detect proxies.
          *
-         * @var array
+         * @var string
          */
-        protected $headers = [
-            Request::HEADER_FORWARDED => 'FORWARDED',
-            Request::HEADER_X_FORWARDED_FOR => 'X_FORWARDED_FOR',
-            Request::HEADER_X_FORWARDED_HOST => 'X_FORWARDED_HOST',
-            Request::HEADER_X_FORWARDED_PORT => 'X_FORWARDED_PORT',
-            Request::HEADER_X_FORWARDED_PROTO => 'X_FORWARDED_PROTO',
-        ];
+        protected $headers = Request::HEADER_X_FORWARDED_ALL;
     }
+
+> {tip} If you are using AWS Elastic Load Balancing, your `$headers` value should be `Request::HEADER_X_FORWARDED_AWS_ELB`. For more information on the constants that may be used in the `$headers` property, check out Symfony's documentation on [trusting proxies](https://symfony.com/doc/current/deployment/proxies.html).
 
 #### Trusting All Proxies
 
-If you are using Amazon AWS or another "cloud" load balancer provider, you may not know the IP addresses of your actual balancers. In this case, you may use `**` to trust all proxies:
+If you are using Amazon AWS or another "cloud" load balancer provider, you may not know the IP addresses of your actual balancers. In this case, you may use `*` to trust all proxies:
 
     /**
      * The trusted proxies for this application.
      *
      * @var array
      */
-    protected $proxies = '**';
+    protected $proxies = '*';

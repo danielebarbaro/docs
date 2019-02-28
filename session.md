@@ -93,7 +93,7 @@ There are two primary ways of working with session data in Laravel: the global `
         }
     }
 
-When you retrieve a value from the session, you may also pass a default value as the second argument to the `get` method. This default value will be returned if the specified key does not exist in the session. If you pass a `Closure` as the default value to the `get` method and the requested key does not exist, the `Closure` will be executed and its result returned:
+When you retrieve an item from the session, you may also pass a default value as the second argument to the `get` method. This default value will be returned if the specified key does not exist in the session. If you pass a `Closure` as the default value to the `get` method and the requested key does not exist, the `Closure` will be executed and its result returned:
 
     $value = $request->session()->get('key', 'default');
 
@@ -126,13 +126,13 @@ If you would like to retrieve all the data in the session, you may use the `all`
 
 #### Determining If An Item Exists In The Session
 
-To determine if a value is present in the session, you may use the `has` method. The `has` method returns `true` if the value is present and is not `null`:
+To determine if an item is present in the session, you may use the `has` method. The `has` method returns `true` if the item is present and is not `null`:
 
     if ($request->session()->has('users')) {
         //
     }
 
-To determine if a value is present in the session, even if its value is `null`, you may use the `exists` method. The `exists` method returns `true` if the value is present:
+To determine if an item is present in the session, even if its value is `null`, you may use the `exists` method. The `exists` method returns `true` if the item is present:
 
     if ($request->session()->exists('users')) {
         //
@@ -179,7 +179,11 @@ If you need to keep your flash data around for several requests, you may use the
 
 The `forget` method will remove a piece of data from the session. If you would like to remove all data from the session, you may use the `flush` method:
 
+    // Forget a single key...
     $request->session()->forget('key');
+
+    // Forget multiple keys...
+    $request->session()->forget(['key1', 'key2']);
 
     $request->session()->flush();
 
@@ -219,7 +223,7 @@ Your custom session driver should implement the `SessionHandlerInterface`. This 
 Since the purpose of these methods is not readily understandable, let's quickly cover what each of the methods do:
 
 <div class="content-list" markdown="1">
-- The `open` method would typically be used in file based session store systems. Since Laravel ships with a `file` session driver, you will almost never need to put anything in this method. You can leave it as an empty stub. It is simply a fact of poor interface design (which we'll discuss later) that PHP requires us to implement this method.
+- The `open` method would typically be used in file based session store systems. Since Laravel ships with a `file` session driver, you will almost never need to put anything in this method. You can leave it as an empty stub. It is a fact of poor interface design (which we'll discuss later) that PHP requires us to implement this method.
 - The `close` method, like the `open` method, can also usually be disregarded. For most drivers, it is not needed.
 - The `read` method should return the string version of the session data associated with the given `$sessionId`. There is no need to do any serialization or other encoding when retrieving or storing session data in your driver, as Laravel will perform the serialization for you.
 - The `write` method should write the given `$data` string associated with the `$sessionId` to some persistent storage system, such as MongoDB, Dynamo, etc.  Again, you should not perform any serialization - Laravel will have already handled that for you.

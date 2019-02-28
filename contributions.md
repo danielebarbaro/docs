@@ -3,6 +3,7 @@
 - [Bug Reports](#bug-reports)
 - [Core Development Discussion](#core-development-discussion)
 - [Which Branch?](#which-branch)
+- [Compiled Assets](#compiled-assets)
 - [Security Vulnerabilities](#security-vulnerabilities)
 - [Coding Style](#coding-style)
     - [PHPDoc](#phpdoc)
@@ -33,26 +34,32 @@ The Laravel source code is managed on GitHub, and there are repositories for eac
 - [Laravel Passport](https://github.com/laravel/passport)
 - [Laravel Scout](https://github.com/laravel/scout)
 - [Laravel Socialite](https://github.com/laravel/socialite)
+- [Laravel Telescope](https://github.com/laravel/telescope)
 - [Laravel Website](https://github.com/laravel/laravel.com)
 </div>
 
 <a name="core-development-discussion"></a>
 ## Core Development Discussion
 
-You may propose new features or improvements of existing Laravel behavior in the Laravel Internals [issue board](https://github.com/laravel/internals/issues). If you propose a new feature, please be willing to implement at least some of the code that would be needed to complete the feature.
+You may propose new features or improvements of existing Laravel behavior in the Laravel Ideas [issue board](https://github.com/laravel/ideas/issues). If you propose a new feature, please be willing to implement at least some of the code that would be needed to complete the feature.
 
-Informal discussion regarding bugs, new features, and implementation of existing features takes place in the `#internals` channel of the [LaraChat](https://larachat.co) Slack team. Taylor Otwell, the maintainer of Laravel, is typically present in the channel on weekdays from 8am-5pm (UTC-06:00 or America/Chicago), and sporadically present in the channel at other times.
+Informal discussion regarding bugs, new features, and implementation of existing features takes place in the `#internals` channel of the [Laravel Discord server](https://discordapp.com/invite/mPZNm7A). Taylor Otwell, the maintainer of Laravel, is typically present in the channel on weekdays from 8am-5pm (UTC-06:00 or America/Chicago), and sporadically present in the channel at other times.
 
 <a name="which-branch"></a>
 ## Which Branch?
 
-**All** bug fixes should be sent to the latest stable branch or to the current LTS branch (5.5). Bug fixes should **never** be sent to the `master` branch unless they fix features that exist only in the upcoming release.
+**All** bug fixes should be sent to the latest stable branch or to the [current LTS branch](/docs/{{version}}/releases#support-policy). Bug fixes should **never** be sent to the `master` branch unless they fix features that exist only in the upcoming release.
 
 **Minor** features that are **fully backwards compatible** with the current Laravel release may be sent to the latest stable branch.
 
 **Major** new features should always be sent to the `master` branch, which contains the upcoming Laravel release.
 
-If you are unsure if your feature qualifies as a major or minor, please ask Taylor Otwell in the `#internals` channel of the [LaraChat](https://larachat.co) Slack team.
+If you are unsure if your feature qualifies as a major or minor, please ask Taylor Otwell in the `#internals` channel of the [Laravel Discord server](https://discordapp.com/invite/mPZNm7A).
+
+<a name="compiled-assets"></a>
+## Compiled Assets
+
+If you are submitting a change that will affect a compiled file, such as most of the files in `resources/sass` or `resources/js` of the `laravel/laravel` repository, do not commit the compiled files. Due to their large size, they cannot realistically be reviewed by a maintainer. This could be exploited as a way to inject malicious code into Laravel. In order to defensively prevent this, all compiled files will be generated and committed by Laravel maintainers.
 
 <a name="security-vulnerabilities"></a>
 ## Security Vulnerabilities
@@ -76,6 +83,7 @@ Below is an example of a valid Laravel documentation block. Note that the `@para
      * @param  \Closure|string|null  $concrete
      * @param  bool  $shared
      * @return void
+     * @throws \Exception
      */
     public function bind($abstract, $concrete = null, $shared = false)
     {

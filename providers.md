@@ -14,7 +14,7 @@ Service providers are the central place of all Laravel application bootstrapping
 
 But, what do we mean by "bootstrapped"? In general, we mean **registering** things, including registering service container bindings, event listeners, middleware, and even routes. Service providers are the central place to configure your application.
 
-If you open the `config/app.php` file included with Laravel, you will see a `providers` array. These are all of the service provider classes that will be loaded for your application. Of course, many of these are "deferred" providers, meaning they will not be loaded on every request, but only when the services they provide are actually needed.
+If you open the `config/app.php` file included with Laravel, you will see a `providers` array. These are all of the service provider classes that will be loaded for your application. Note that many of these are "deferred" providers, meaning they will not be loaded on every request, but only when the services they provide are actually needed.
 
 In this overview you will learn how to write your own service providers and register them with your Laravel application.
 
@@ -58,10 +58,45 @@ Let's take a look at a basic service provider. Within any of your service provid
 
 This service provider only defines a `register` method, and uses that method to define an implementation of `Riak\Connection` in the service container. If you don't understand how the service container works, check out [its documentation](/docs/{{version}}/container).
 
+#### The `bindings` And `singletons` Properties
+
+If your service provider registers many simple bindings, you may wish to use the `bindings` and `singletons` properties instead of manually registering each container binding. When the service provider is loaded by the framework, it will automatically check for these properties and register their bindings:
+
+    <?php
+
+    namespace App\Providers;
+
+    use App\Contracts\ServerProvider;
+    use App\Contracts\DowntimeNotifier;
+    use Illuminate\Support\ServiceProvider;
+    use App\Services\PingdomDowntimeNotifier;
+    use App\Services\DigitalOceanServerProvider;
+
+    class AppServiceProvider extends ServiceProvider
+    {
+        /**
+         * All of the container bindings that should be registered.
+         *
+         * @var array
+         */
+        public $bindings = [
+            ServerProvider::class => DigitalOceanServerProvider::class,
+        ];
+
+        /**
+         * All of the container singletons that should be registered.
+         *
+         * @var array
+         */
+        public $singletons = [
+            DowntimeNotifier::class => PingdomDowntimeNotifier::class,
+        ];
+    }
+
 <a name="the-boot-method"></a>
 ### The Boot Method
 
-So, what if we need to register a view composer within our service provider? This should be done within the `boot` method. **This method is called after all other service providers have been registered**, meaning you have access to all other services that have been registered by the framework:
+So, what if we need to register a [view composer](/docs/{{version}}/views#view-composers) within our service provider? This should be done within the `boot` method. **This method is called after all other service providers have been registered**, meaning you have access to all other services that have been registered by the framework:
 
     <?php
 
@@ -102,7 +137,7 @@ You may type-hint dependencies for your service provider's `boot` method. The [s
 
 All service providers are registered in the `config/app.php` configuration file. This file contains a `providers` array where you can list the class names of your service providers. By default, a set of Laravel core service providers are listed in this array. These providers bootstrap the core Laravel components, such as the mailer, queue, cache, and others.
 
-To register your provider, simply add it to the array:
+To register your provider, add it to the array:
 
     'providers' => [
         // Other Service Providers
@@ -117,7 +152,7 @@ If your provider is **only** registering bindings in the [service container](/do
 
 Laravel compiles and stores a list of all of the services supplied by deferred service providers, along with the name of its service provider class. Then, only when you attempt to resolve one of these services does Laravel load the service provider.
 
-To defer the loading of a provider, set the `defer` property to `true` and define a `provides` method. The `provides` method should return the service container bindings registered by the provider:
+To defer the loading of a provider, implement the `\Illuminate\Contracts\Support\DeferrableProvider` interface and define a `provides` method. The `provides` method should return the service container bindings registered by the provider:
 
     <?php
 
@@ -125,16 +160,10 @@ To defer the loading of a provider, set the `defer` property to `true` and defin
 
     use Riak\Connection;
     use Illuminate\Support\ServiceProvider;
+    use Illuminate\Contracts\Support\DeferrableProvider;
 
-    class RiakServiceProvider extends ServiceProvider
+    class RiakServiceProvider extends ServiceProvider implements DeferrableProvider
     {
-        /**
-         * Indicates if loading of the provider is deferred.
-         *
-         * @var bool
-         */
-        protected $defer = true;
-
         /**
          * Register the service provider.
          *
@@ -156,5 +185,4 @@ To defer the loading of a provider, set the `defer` property to `true` and defin
         {
             return [Connection::class];
         }
-
     }

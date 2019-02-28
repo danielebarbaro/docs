@@ -1,6 +1,7 @@
 # Artisan Console
 
 - [Introduction](#introduction)
+    - [Tinker (REPL)](#tinker)
 - [Writing Commands](#writing-commands)
     - [Generating Commands](#generating-commands)
     - [Command Structure](#command-structure)
@@ -25,15 +26,36 @@ Artisan is the command-line interface included with Laravel. It provides a numbe
 
     php artisan list
 
-Every command also includes a "help" screen which displays and describes the command's available arguments and options. To view a help screen, simply precede the name of the command with `help`:
+Every command also includes a "help" screen which displays and describes the command's available arguments and options. To view a help screen, precede the name of the command with `help`:
 
     php artisan help migrate
 
-#### Laravel REPL
+<a name="tinker"></a>
+### Tinker (REPL)
 
 All Laravel applications include Tinker, a REPL powered by the [PsySH](https://github.com/bobthecow/psysh) package. Tinker allows you to interact with your entire Laravel application on the command line, including the Eloquent ORM, jobs, events, and more. To enter the Tinker environment, run the `tinker` Artisan command:
 
     php artisan tinker
+
+You can publish Tinker's configuration file using the `vendor:publish` command:
+
+    php artisan vendor:publish --provider="Laravel\Tinker\TinkerServiceProvider"
+
+#### Command Whitelist
+
+Tinker utilizes a white-list to determine which Artisan commands are allowed to be run within its shell. By default, you may run the `clear-compiled`, `down`, `env`, `inspire`, `migrate`, `optimize`, and `up` commands. If you would like to white-list more commands you may add them to the `commands` array in your `tinker.php` configuration file:
+
+    'commands' => [
+        // App\Console\Commands\ExampleCommand::class,
+    ],
+
+#### Alias Blacklist
+
+Typically, Tinker automatically aliases classes as you require them in Tinker. However, you may wish to never alias some classes. You may accomplish this by listing the classes in the `dont_alias` array of your `tinker.php` configuration file:
+
+    'dont_alias' => [
+        App\User::class,
+    ],
 
 <a name="writing-commands"></a>
 ## Writing Commands
@@ -54,7 +76,7 @@ After generating your command, you should fill in the `signature` and `descripti
 
 > {tip} For greater code reuse, it is good practice to keep your console commands light and let them defer to application services to accomplish their tasks. In the example below, note that we inject a service class to do the "heavy lifting" of sending the e-mails.
 
-Let's take a look at an example command. Note that we are able to inject any dependencies we need into the command's constructor. The Laravel [service container](/docs/{{version}}/container) will automatically inject all dependencies type-hinted in the constructor:
+Let's take a look at an example command. Note that we are able to inject any dependencies we need into the command's `handle` method. The Laravel [service container](/docs/{{version}}/container) will automatically inject all dependencies that are type-hinted in this method's signature:
 
     <?php
 
@@ -81,33 +103,24 @@ Let's take a look at an example command. Note that we are able to inject any dep
         protected $description = 'Send drip e-mails to a user';
 
         /**
-         * The drip e-mail service.
-         *
-         * @var DripEmailer
-         */
-        protected $drip;
-
-        /**
          * Create a new command instance.
          *
-         * @param  DripEmailer  $drip
          * @return void
          */
-        public function __construct(DripEmailer $drip)
+        public function __construct()
         {
             parent::__construct();
-
-            $this->drip = $drip;
         }
 
         /**
          * Execute the console command.
          *
+         * @param  \App\DripEmailer  $drip
          * @return mixed
          */
-        public function handle()
+        public function handle(DripEmailer $drip)
         {
-            $this->drip->send(User::find($this->argument('user')));
+            $drip->send(User::find($this->argument('user')));
         }
     }
 
@@ -321,9 +334,9 @@ The `anticipate` method can be used to provide auto-completion for possible choi
 
 #### Multiple Choice Questions
 
-If you need to give the user a predefined set of choices, you may use the `choice` method. You may set the default value to be returned if no option is chosen:
+If you need to give the user a predefined set of choices, you may use the `choice` method. You may set the array index of the default value to be returned if no option is chosen:
 
-    $name = $this->choice('What is your name?', ['Taylor', 'Dayle'], $default);
+    $name = $this->choice('What is your name?', ['Taylor', 'Dayle'], $defaultIndex);
 
 <a name="writing-output"></a>
 ### Writing Output
@@ -366,6 +379,8 @@ For long running tasks, it could be helpful to show a progress indicator. Using 
 
     $bar = $this->output->createProgressBar(count($users));
 
+    $bar->start();
+
     foreach ($users as $user) {
         $this->performTask($user);
 
@@ -374,7 +389,7 @@ For long running tasks, it could be helpful to show a progress indicator. Using 
 
     $bar->finish();
 
-For more advanced options, check out the [Symfony Progress Bar component documentation](https://symfony.com/doc/2.7/components/console/helpers/progressbar.html).
+For more advanced options, check out the [Symfony Progress Bar component documentation](https://symfony.com/doc/current/components/console/helpers/progressbar.html).
 
 <a name="registering-commands"></a>
 ## Registering Commands
@@ -403,7 +418,7 @@ You may also manually register commands by adding its class name to the `$comman
 <a name="programmatically-executing-commands"></a>
 ## Programmatically Executing Commands
 
-Sometimes you may wish to execute an Artisan command outside of the CLI. For example, you may wish to fire an Artisan command from a route or controller. You may use the `call` method on the `Artisan` facade to accomplish this. The `call` method accepts the name of the command as the first argument, and an array of command parameters as the second argument. The exit code will be returned:
+Sometimes you may wish to execute an Artisan command outside of the CLI. For example, you may wish to fire an Artisan command from a route or controller. You may use the `call` method on the `Artisan` facade to accomplish this. The `call` method accepts either the command's name or class as the first argument, and an array of command parameters as the second argument. The exit code will be returned:
 
     Route::get('/foo', function () {
         $exitCode = Artisan::call('email:send', [
@@ -412,6 +427,10 @@ Sometimes you may wish to execute an Artisan command outside of the CLI. For exa
 
         //
     });
+
+Alternatively, you may pass the entire Artisan command to the `call` method as a string:
+
+    Artisan::call('email:send 1 --queue=default');
 
 Using the `queue` method on the `Artisan` facade, you may even queue Artisan commands so they are processed in the background by your [queue workers](/docs/{{version}}/queues). Before using this method, make sure you have configured your queue and are running a queue listener:
 
@@ -431,7 +450,7 @@ You may also specify the connection or queue the Artisan command should be dispa
 
 #### Passing Array Values
 
-If your command defines an option that accepts an array, you may simply pass an array of values to that option:
+If your command defines an option that accepts an array, you may pass an array of values to that option:
 
     Route::get('/foo', function () {
         $exitCode = Artisan::call('email:send', [

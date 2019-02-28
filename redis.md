@@ -29,10 +29,17 @@ The Redis configuration for your application is located in the `config/database.
         'client' => 'predis',
 
         'default' => [
-            'host' => env('REDIS_HOST', 'localhost'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
             'password' => env('REDIS_PASSWORD', null),
             'port' => env('REDIS_PORT', 6379),
-            'database' => 0,
+            'database' => env('REDIS_DB', 0),
+        ],
+
+        'cache' => [
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'password' => env('REDIS_PASSWORD', null),
+            'port' => env('REDIS_PORT', 6379),
+            'database' => env('REDIS_CACHE_DB', 1),
         ],
 
     ],
@@ -79,7 +86,7 @@ By default, clusters will perform client-side sharding across your nodes, allowi
 <a name="predis"></a>
 ### Predis
 
-In addition to the default `host`, `port`, `database`, and `password` server configuration options, Predis supports additional [connection parameters](https://github.com/nrk/predis/wiki/Connection-Parameters) that may be defined for each of your Redis servers. To utilize these additional configuration options, simply add them to your Redis server configuration in the `config/database.php` configuration file:
+In addition to the default `host`, `port`, `database`, and `password` server configuration options, Predis supports additional [connection parameters](https://github.com/nrk/predis/wiki/Connection-Parameters) that may be defined for each of your Redis servers. To utilize these additional configuration options, add them to your Redis server configuration in the `config/database.php` configuration file:
 
     'default' => [
         'host' => env('REDIS_HOST', 'localhost'),
@@ -91,8 +98,6 @@ In addition to the default `host`, `port`, `database`, and `password` server con
 
 <a name="phpredis"></a>
 ### PhpRedis
-
-> {note} If you have the PhpRedis PHP extension installed via PECL, you will need to rename the `Redis` alias in your `config/app.php` configuration file.
 
 To utilize the PhpRedis extension, you should change the `client` option of your Redis configuration to `phpredis`. This option is found in your `config/database.php` configuration file:
 
@@ -141,7 +146,7 @@ You may interact with Redis by calling various methods on the `Redis` [facade](/
         }
     }
 
-Of course, as mentioned above, you may call any of the Redis commands on the `Redis` facade. Laravel uses magic methods to pass the commands to the Redis server, so simply pass the arguments the Redis command expects:
+As mentioned above, you may call any of the Redis commands on the `Redis` facade. Laravel uses magic methods to pass the commands to the Redis server, so pass the arguments the Redis command expects:
 
     Redis::set('name', 'Taylor');
 

@@ -7,6 +7,7 @@
     - [Retrieving Items From The Cache](#retrieving-items-from-the-cache)
     - [Storing Items In The Cache](#storing-items-in-the-cache)
     - [Removing Items From The Cache](#removing-items-from-the-cache)
+    - [Atomic Locks](#atomic-locks)
     - [The Cache Helper](#the-cache-helper)
 - [Cache Tags](#cache-tags)
     - [Storing Tagged Cache Items](#storing-tagged-cache-items)
@@ -104,7 +105,7 @@ Using the `Cache` facade, you may access various cache stores via the `store` me
 
     $value = Cache::store('file')->get('foo');
 
-    Cache::store('redis')->put('bar', 'baz', 10);
+    Cache::store('redis')->put('bar', 'baz', 600); // 10 Minutes
 
 <a name="retrieving-items-from-the-cache"></a>
 ### Retrieving Items From The Cache
@@ -123,7 +124,7 @@ You may even pass a `Closure` as the default value. The result of the `Closure` 
 
 #### Checking For Item Existence
 
-The `has` method may be used to determine if an item exists in the cache. This method will return `false` if the value is `null` or `false`:
+The `has` method may be used to determine if an item exists in the cache. This method will return `false` if the value is `null`:
 
     if (Cache::has('key')) {
         //
@@ -142,7 +143,7 @@ The `increment` and `decrement` methods may be used to adjust the value of integ
 
 Sometimes you may wish to retrieve an item from the cache, but also store a default value if the requested item doesn't exist. For example, you may wish to retrieve all users from the cache or, if they don't exist, retrieve them from the database and add them to the cache. You may do this using the `Cache::remember` method:
 
-    $value = Cache::remember('users', $minutes, function () {
+    $value = Cache::remember('users', $seconds, function () {
         return DB::table('users')->get();
     });
 
@@ -150,7 +151,7 @@ If the item does not exist in the cache, the `Closure` passed to the `remember` 
 
 You may use the `rememberForever` method to retrieve an item from the cache or store it forever:
 
-    $value = Cache::rememberForever('users', function() {
+    $value = Cache::rememberForever('users', function () {
         return DB::table('users')->get();
     });
 
@@ -163,21 +164,23 @@ If you need to retrieve an item from the cache and then delete the item, you may
 <a name="storing-items-in-the-cache"></a>
 ### Storing Items In The Cache
 
-You may use the `put` method on the `Cache` facade to store items in the cache. When you place an item in the cache, you need to specify the number of minutes for which the value should be cached:
+You may use the `put` method on the `Cache` facade to store items in the cache:
 
-    Cache::put('key', 'value', $minutes);
+    Cache::put('key', 'value', $seconds);
 
-Instead of passing the number of minutes as an integer, you may also pass a `DateTime` instance representing the expiration time of the cached item:
+If the storage time is not passed to the `put` method, the item will be stored indefinitely:
 
-    $expiresAt = Carbon::now()->addMinutes(10);
+    Cache::put('key', 'value');
 
-    Cache::put('key', 'value', $expiresAt);
+Instead of passing the number of seconds as an integer, you may also pass a `DateTime` instance representing the expiration time of the cached item:
+
+    Cache::put('key', 'value', now()->addMinutes(10));
 
 #### Store If Not Present
 
 The `add` method will only add the item to the cache if it does not already exist in the cache store. The method will return `true` if the item is actually added to the cache. Otherwise, the method will return `false`:
 
-    Cache::add('key', 'value', $minutes);
+    Cache::add('key', 'value', $seconds);
 
 #### Storing Items Forever
 
@@ -194,11 +197,74 @@ You may remove items from the cache using the `forget` method:
 
     Cache::forget('key');
 
+You may also remove items by providing a zero or negative TTL:
+
+    Cache::put('key', 'value', 0);
+
+    Cache::put('key', 'value', -5);
+
 You may clear the entire cache using the `flush` method:
 
     Cache::flush();
 
 > {note} Flushing the cache does not respect the cache prefix and will remove all entries from the cache. Consider this carefully when clearing a cache which is shared by other applications.
+
+<a name="atomic-locks"></a>
+### Atomic Locks
+
+> {note} To utilize this feature, your application must be using the `memcached`, `dynamodb`, or `redis` cache driver as your application's default cache driver. In addition, all servers must be communicating with the same central cache server.
+
+Atomic locks allow for the manipulation of distributed locks without worrying about race conditions. For example, [Laravel Forge](https://forge.laravel.com) uses atomic locks to ensure that only one remote task is being executed on a server at a time. You may create and manage locks using the `Cache::lock` method:
+
+    use Illuminate\Support\Facades\Cache;
+
+    if ($lock = Cache::lock('foo', 10)->get()) {
+        // Lock acquired for 10 seconds...
+
+        $lock->release();
+    }
+
+The `get` method also accepts a Closure. After the Closure is executed, Laravel will automatically release the lock:
+
+    Cache::lock('foo')->get(function () {
+        // Lock acquired indefinitely and automatically released...
+    });
+
+If the lock is not available at the moment you request it, you may instruct Laravel to wait for a specified number of seconds. If the lock can not be acquired within the specified time limit, an `Illuminate\Contracts\Cache\LockTimeoutException` will be thrown:
+
+    use Illuminate\Contracts\Cache\LockTimeoutException;
+
+    try {
+        $lock = Cache::lock('foo', 10)->block(5);
+
+        // Lock acquired after waiting maximum of 5 seconds...
+    } catch (LockTimeoutException $e) {
+        // Unable to acquire lock...
+    } finally {
+        optional($lock)->release();
+    }
+
+    Cache::lock('foo', 10)->block(5, function () {
+        // Lock acquired after waiting maximum of 5 seconds...
+    });
+
+#### Managing Locks Across Processes
+
+Sometimes, you may wish to acquire a lock in one process and release it in another process. For example, you may acquire a lock during a web request and wish to release the lock at the end of a queued job that is triggered by that request. In this scenario, you should pass the lock's scoped "owner token" to the queued job so that the job can re-instantiate the lock using the given token:
+
+    // Within Controller...
+    $podcast = Podcast::find($id);
+
+    if ($lock = Cache::lock('foo', 120)->get()) {
+        ProcessPodcast::dispatch($podcast, $lock->owner());
+    }
+
+    // Within ProcessPodcast Job...
+    Cache::restoreLock('foo', $this->owner)->release();
+
+If you would like to release a lock without respecting its current owner, you may use the `forceRelease` method:
+
+    Cache::lock('foo')->forceRelease();
 
 <a name="the-cache-helper"></a>
 ### The Cache Helper
@@ -209,9 +275,15 @@ In addition to using the `Cache` facade or [cache contract](/docs/{{version}}/co
 
 If you provide an array of key / value pairs and an expiration time to the function, it will store values in the cache for the specified duration:
 
-    cache(['key' => 'value'], $minutes);
+    cache(['key' => 'value'], $seconds);
 
-    cache(['key' => 'value'], Carbon::now()->addSeconds(10));
+    cache(['key' => 'value'], now()->addMinutes(10));
+
+When the `cache` function is called without any arguments, it returns an instance of the `Illuminate\Contracts\Cache\Factory` implementation, allowing you to call other caching methods:
+
+    cache()->remember('users', $seconds, function () {
+        return DB::table('users')->get();
+    });
 
 > {tip} When testing call to the global `cache` function, you may use the `Cache::shouldReceive` method just as if you were [testing a facade](/docs/{{version}}/mocking#mocking-facades).
 
@@ -225,9 +297,9 @@ If you provide an array of key / value pairs and an expiration time to the funct
 
 Cache tags allow you to tag related items in the cache and then flush all cached values that have been assigned a given tag. You may access a tagged cache by passing in an ordered array of tag names. For example, let's access a tagged cache and `put` value in the cache:
 
-    Cache::tags(['people', 'artists'])->put('John', $john, $minutes);
+    Cache::tags(['people', 'artists'])->put('John', $john, $seconds);
 
-    Cache::tags(['people', 'authors'])->put('Anne', $anne, $minutes);
+    Cache::tags(['people', 'authors'])->put('Anne', $anne, $seconds);
 
 <a name="accessing-tagged-cache-items"></a>
 ### Accessing Tagged Cache Items
@@ -267,8 +339,8 @@ To create our custom cache driver, we first need to implement the `Illuminate\Co
     {
         public function get($key) {}
         public function many(array $keys);
-        public function put($key, $value, $minutes) {}
-        public function putMany(array $values, $minutes);
+        public function put($key, $value, $seconds) {}
+        public function putMany(array $values, $seconds);
         public function increment($key, $value = 1) {}
         public function decrement($key, $value = 1) {}
         public function forever($key, $value) {}
@@ -325,7 +397,7 @@ To register the custom cache driver with Laravel, we will use the `extend` metho
 
 The first argument passed to the `extend` method is the name of the driver. This will correspond to your `driver` option in the `config/cache.php` configuration file. The second argument is a Closure that should return an `Illuminate\Cache\Repository` instance. The Closure will be passed an `$app` instance, which is an instance of the [service container](/docs/{{version}}/container).
 
-Once your extension is registered, simply update your `config/cache.php` configuration file's `driver` option to the name of your extension.
+Once your extension is registered, update your `config/cache.php` configuration file's `driver` option to the name of your extension.
 
 <a name="events"></a>
 ## Events

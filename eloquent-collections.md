@@ -9,7 +9,7 @@
 
 All multi-result sets returned by Eloquent are instances of the `Illuminate\Database\Eloquent\Collection` object, including results retrieved via the `get` method or accessed via a relationship. The Eloquent collection object extends the Laravel [base collection](/docs/{{version}}/collections), so it naturally inherits dozens of methods used to fluently work with the underlying array of Eloquent models.
 
-Of course, all collections also serve as iterators, allowing you to loop over them as if they were simple PHP arrays:
+All collections also serve as iterators, allowing you to loop over them as if they were simple PHP arrays:
 
     $users = App\User::where('active', 1)->get();
 
@@ -19,7 +19,7 @@ Of course, all collections also serve as iterators, allowing you to loop over th
 
 However, collections are much more powerful than arrays and expose a variety of map / reduce operations that may be chained using an intuitive interface. For example, let's remove all inactive models and gather the first name for each remaining user:
 
-    $users = App\User::where('active', 1)->get();
+    $users = App\User::all();
 
     $names = $users->reject(function ($user) {
         return $user->active === false;
@@ -115,6 +115,7 @@ All Eloquent collections extend the base [Laravel collection](/docs/{{version}}/
 [shift](/docs/{{version}}/collections#method-shift)
 [shuffle](/docs/{{version}}/collections#method-shuffle)
 [slice](/docs/{{version}}/collections#method-slice)
+[some](/docs/{{version}}/collections#method-some)
 [sort](/docs/{{version}}/collections#method-sort)
 [sortBy](/docs/{{version}}/collections#method-sortby)
 [sortByDesc](/docs/{{version}}/collections#method-sortbydesc)

@@ -25,7 +25,7 @@ Laravel makes interacting with databases extremely simple across a variety of da
 
 The database configuration for your application is located at `config/database.php`. In this file you may define all of your database connections, as well as specify which connection should be used by default. Examples for most of the supported database systems are provided in this file.
 
-By default, Laravel's sample [environment configuration](/docs/{{version}}/configuration#environment-configuration) is ready to use with [Laravel Homestead](/docs/{{version}}/homestead), which is a convenient virtual machine for doing Laravel development on your local machine. Of course, you are free to modify this configuration as needed for your local database.
+By default, Laravel's sample [environment configuration](/docs/{{version}}/configuration#environment-configuration) is ready to use with [Laravel Homestead](/docs/{{version}}/homestead), which is a convenient virtual machine for doing Laravel development on your local machine. You are free to modify this configuration as needed for your local database.
 
 #### SQLite Configuration
 
@@ -33,6 +33,13 @@ After creating a new SQLite database using a command such as `touch database/dat
 
     DB_CONNECTION=sqlite
     DB_DATABASE=/absolute/path/to/database.sqlite
+
+To enable foreign key constraints for SQLite connections, you should add the `foreign_key_constraints` option to your `config/database.php` configuration file:
+
+    'sqlite' => [
+        // ...
+        'foreign_key_constraints' => true,
+    ],
 
 <a name="read-and-write-connections"></a>
 ### Read & Write Connections
@@ -43,17 +50,17 @@ To see how read / write connections should be configured, let's look at this exa
 
     'mysql' => [
         'read' => [
-            'host' => '192.168.1.1',
+            'host' => ['192.168.1.1'],
         ],
         'write' => [
-            'host' => '196.168.1.2'
+            'host' => ['196.168.1.2'],
         ],
         'sticky'    => true,
         'driver'    => 'mysql',
         'database'  => 'database',
         'username'  => 'root',
         'password'  => '',
-        'charset' => 'utf8mb4',
+        'charset'   => 'utf8mb4',
         'collation' => 'utf8mb4_unicode_ci',
         'prefix'    => '',
     ],
@@ -110,7 +117,7 @@ To run a basic query, you may use the `select` method on the `DB` facade:
 
 The first argument passed to the `select` method is the raw SQL query, while the second argument is any parameter bindings that need to be bound to the query. Typically, these are the values of the `where` clause constraints. Parameter binding provides protection against SQL injection.
 
-The `select` method will always return an `array` of results. Each result within the array will be a PHP `StdClass` object, allowing you to access the values of the results:
+The `select` method will always return an `array` of results. Each result within the array will be a PHP `stdClass` object, allowing you to access the values of the results:
 
     foreach ($users as $user) {
         echo $user->name;

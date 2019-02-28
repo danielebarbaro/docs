@@ -20,12 +20,15 @@ To generate a seeder, execute the `make:seeder` [Artisan command](/docs/{{versio
 
 A seeder class only contains one method by default: `run`. This method is called when the `db:seed` [Artisan command](/docs/{{version}}/artisan) is executed. Within the `run` method, you may insert data into your database however you wish. You may use the [query builder](/docs/{{version}}/queries) to manually insert data or you may use [Eloquent model factories](/docs/{{version}}/database-testing#writing-factories).
 
+> {tip} [Mass assignment protection](/docs/{{version}}/eloquent#mass-assignment) is automatically disabled during database seeding.
+
 As an example, let's modify the default `DatabaseSeeder` class and add a database insert statement to the `run` method:
 
     <?php
 
+    use Illuminate\Support\Str;
     use Illuminate\Database\Seeder;
-    use Illuminate\Database\Eloquent\Model;
+    use Illuminate\Support\Facades\DB;
 
     class DatabaseSeeder extends Seeder
     {
@@ -37,12 +40,14 @@ As an example, let's modify the default `DatabaseSeeder` class and add a databas
         public function run()
         {
             DB::table('users')->insert([
-                'name' => str_random(10),
-                'email' => str_random(10).'@gmail.com',
+                'name' => Str::random(10),
+                'email' => Str::random(10).'@gmail.com',
                 'password' => bcrypt('secret'),
             ]);
         }
     }
+
+> {tip} You may type-hint any dependencies you need within the `run` method's signature. They will automatically be resolved via the Laravel [service container](/docs/{{version}}/container).
 
 <a name="using-model-factories"></a>
 ### Using Model Factories
@@ -58,15 +63,15 @@ For example, let's create 50 users and attach a relationship to each user:
      */
     public function run()
     {
-        factory(App\User::class, 50)->create()->each(function ($u) {
-            $u->posts()->save(factory(App\Post::class)->make());
+        factory(App\User::class, 50)->create()->each(function ($user) {
+            $user->posts()->save(factory(App\Post::class)->make());
         });
     }
 
 <a name="calling-additional-seeders"></a>
 ### Calling Additional Seeders
 
-Within the `DatabaseSeeder` class, you may use the `call` method to execute additional seed classes. Using the `call` method allows you to break up your database seeding into multiple files so that no single seeder class becomes overwhelmingly large. Simply pass the name of the seeder class you wish to run:
+Within the `DatabaseSeeder` class, you may use the `call` method to execute additional seed classes. Using the `call` method allows you to break up your database seeding into multiple files so that no single seeder class becomes overwhelmingly large. Pass the name of the seeder class you wish to run:
 
     /**
      * Run the database seeds.
@@ -85,7 +90,11 @@ Within the `DatabaseSeeder` class, you may use the `call` method to execute addi
 <a name="running-seeders"></a>
 ## Running Seeders
 
-Once you have written your seeder classes, you may use the `db:seed` Artisan command to seed your database. By default, the `db:seed` command runs the `DatabaseSeeder` class, which may be used to call other seed classes. However, you may use the `--class` option to specify a specific seeder class to run individually:
+Once you have written your seeder, you may need to regenerate Composer's autoloader using the `dump-autoload` command:
+
+    composer dump-autoload
+
+Now you may use the `db:seed` Artisan command to seed your database. By default, the `db:seed` command runs the `DatabaseSeeder` class, which may be used to call other seed classes. However, you may use the `--class` option to specify a specific seeder class to run individually:
 
     php artisan db:seed
 

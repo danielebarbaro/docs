@@ -41,7 +41,7 @@ Below is an example of a basic controller class. Note that the controller extend
          * Show the profile for the given user.
          *
          * @param  int  $id
-         * @return Response
+         * @return View
          */
         public function show($id)
         {
@@ -53,7 +53,7 @@ You can define a route to this controller action like so:
 
     Route::get('user/{id}', 'UserController@show');
 
-Now, when a request matches the specified route URI, the `show` method on the `UserController` class will be executed. Of course, the route parameters will also be passed to the method.
+Now, when a request matches the specified route URI, the `show` method on the `UserController` class will be executed. The route parameters will also be passed to the method.
 
 > {tip} Controllers are not **required** to extend a base class. However, you will not have access to convenience features such as the `middleware`, `validate`, and `dispatch` methods.
 
@@ -62,7 +62,7 @@ Now, when a request matches the specified route URI, the `show` method on the `U
 
 It is very important to note that we did not need to specify the full controller namespace when defining the controller route. Since the `RouteServiceProvider` loads your route files within a route group that contains the namespace, we only specified the portion of the class name that comes after the `App\Http\Controllers` portion of the namespace.
 
-If you choose to nest your controllers deeper into the `App\Http\Controllers` directory, simply use the specific class name relative to the `App\Http\Controllers` root namespace. So, if your full controller class is `App\Http\Controllers\Photos\AdminController`, you should register routes to the controller like so:
+If you choose to nest your controllers deeper into the `App\Http\Controllers` directory, use the specific class name relative to the `App\Http\Controllers` root namespace. So, if your full controller class is `App\Http\Controllers\Photos\AdminController`, you should register routes to the controller like so:
 
     Route::get('foo', 'Photos\AdminController@method');
 
@@ -84,7 +84,7 @@ If you would like to define a controller that only handles a single action, you 
          * Show the profile for the given user.
          *
          * @param  int  $id
-         * @return Response
+         * @return View
          */
         public function __invoke($id)
         {
@@ -95,6 +95,10 @@ If you would like to define a controller that only handles a single action, you 
 When registering routes for single action controllers, you do not need to specify a method:
 
     Route::get('user/{id}', 'ShowProfile');
+
+You may generate an invokable controller by using the `--invokable` option of the `make:controller` Artisan command:
+
+    php artisan make:controller ShowProfile --invokable
 
 <a name="controller-middleware"></a>
 ## Controller Middleware
@@ -174,29 +178,31 @@ If you are using route model binding and would like the resource controller's me
 
 #### Spoofing Form Methods
 
-Since HTML forms can't make `PUT`, `PATCH`, or `DELETE` requests, you will need to add a hidden `_method` field to spoof these HTTP verbs. The `method_field` helper can create this field for you:
+Since HTML forms can't make `PUT`, `PATCH`, or `DELETE` requests, you will need to add a hidden `_method` field to spoof these HTTP verbs. The `@method` Blade directive can create this field for you:
 
-    {{ method_field('PUT') }}
+    <form action="/foo/bar" method="POST">
+        @method('PUT')
+    </form>
 
 <a name="restful-partial-resource-routes"></a>
 ### Partial Resource Routes
 
 When declaring a resource route, you may specify a subset of actions the controller should handle instead of the full set of default actions:
 
-    Route::resource('photo', 'PhotoController', ['only' => [
+    Route::resource('photos', 'PhotoController')->only([
         'index', 'show'
-    ]]);
+    ]);
 
-    Route::resource('photo', 'PhotoController', ['except' => [
+    Route::resource('photos', 'PhotoController')->except([
         'create', 'store', 'update', 'destroy'
-    ]]);
+    ]);
 
 #### API Resource Routes
 
 When declaring resource routes that will be consumed by APIs, you will commonly want to exclude routes that present HTML templates such as `create` and `edit`. For convenience, you may use the `apiResource` method to automatically exclude these two routes:
 
-    Route::apiResource('photo', 'PhotoController');
-    
+    Route::apiResource('photos', 'PhotoController');
+
 You may register many API resource controllers at once by passing an array to the `apiResources` method:
 
     Route::apiResources([
@@ -204,27 +210,31 @@ You may register many API resource controllers at once by passing an array to th
         'posts' => 'PostController'
     ]);
 
+To quickly generate an API resource controller that does not include the `create` or `edit` methods, use the `--api` switch when executing the `make:controller` command:
+
+    php artisan make:controller API/PhotoController --api
+
 <a name="restful-naming-resource-routes"></a>
 ### Naming Resource Routes
 
 By default, all resource controller actions have a route name; however, you can override these names by passing a `names` array with your options:
 
-    Route::resource('photo', 'PhotoController', ['names' => [
-        'create' => 'photo.build'
-    ]]);
+    Route::resource('photos', 'PhotoController')->names([
+        'create' => 'photos.build'
+    ]);
 
 <a name="restful-naming-resource-route-parameters"></a>
 ### Naming Resource Route Parameters
 
-By default, `Route::resource` will create the route parameters for your resource routes based on the "singularized" version of the resource name. You can easily override this on a per resource basis by passing `parameters` in the options array. The `parameters` array should be an associative array of resource names and parameter names:
+By default, `Route::resource` will create the route parameters for your resource routes based on the "singularized" version of the resource name. You can easily override this on a per resource basis by using the `parameters` method. The array passed into the `parameters` method should be an associative array of resource names and parameter names:
 
-    Route::resource('user', 'AdminUserController', ['parameters' => [
-        'user' => 'admin_user'
-    ]]);
+    Route::resource('users', 'AdminUserController')->parameters([
+        'users' => 'admin_user'
+    ]);
 
  The example above generates the following URIs for the resource's `show` route:
 
-    /user/{admin_user}
+    /users/{admin_user}
 
 <a name="restful-localizing-resource-uris"></a>
 ### Localizing Resource URIs
@@ -295,7 +305,7 @@ The Laravel [service container](/docs/{{version}}/container) is used to resolve 
         }
     }
 
-Of course, you may also type-hint any [Laravel contract](/docs/{{version}}/contracts). If the container can resolve it, you can type-hint it. Depending on your application, injecting your dependencies into your controller may provide better testability.
+You may also type-hint any [Laravel contract](/docs/{{version}}/contracts). If the container can resolve it, you can type-hint it. Depending on your application, injecting your dependencies into your controller may provide better testability.
 
 #### Method Injection
 
@@ -323,7 +333,7 @@ In addition to constructor injection, you may also type-hint dependencies on you
         }
     }
 
-If your controller method is also expecting input from a route parameter, simply list your route arguments after your other dependencies. For example, if your route is defined like so:
+If your controller method is also expecting input from a route parameter, list your route arguments after your other dependencies. For example, if your route is defined like so:
 
     Route::put('user/{id}', 'UserController@update');
 

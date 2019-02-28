@@ -3,6 +3,7 @@
 - [Introduction](#introduction)
 - [Generating Resources](#generating-resources)
 - [Concept Overview](#concept-overview)
+    - [Resource Collections](#resource-collections)
 - [Writing Resources](#writing-resources)
     - [Data Wrapping](#data-wrapping)
     - [Pagination](#pagination)
@@ -19,7 +20,7 @@ When building an API, you may need a transformation layer that sits between your
 <a name="generating-resources"></a>
 ## Generating Resources
 
-To generate a resource class, you may use the `make:resource` Artisan command. By default, resources will be placed in the `app/Http/Resources` directory of your application. Resources extend the `Illuminate\Http\Resources\Json\Resource` class:
+To generate a resource class, you may use the `make:resource` Artisan command. By default, resources will be placed in the `app/Http/Resources` directory of your application. Resources extend the `Illuminate\Http\Resources\Json\JsonResource` class:
 
     php artisan make:resource User
 
@@ -27,7 +28,7 @@ To generate a resource class, you may use the `make:resource` Artisan command. B
 
 In addition to generating resources that transform individual models, you may generate resources that are responsible for transforming collections of models. This allows your response to include links and other meta information that is relevant to an entire collection of a given resource.
 
-To create a resource collection, you should use the `--collection` flag when creating the resource. Or, simply including the word `Collection` in the resource name will indicate to Laravel that it should create a collection resource. Collection resources extend the `Illuminate\Http\Resources\Json\ResourceCollection` class:
+To create a resource collection, you should use the `--collection` flag when creating the resource. Or, including the word `Collection` in the resource name will indicate to Laravel that it should create a collection resource. Collection resources extend the `Illuminate\Http\Resources\Json\ResourceCollection` class:
 
     php artisan make:resource Users --collection
 
@@ -44,14 +45,14 @@ Before diving into all of the options available to you when writing resources, l
 
     namespace App\Http\Resources;
 
-    use Illuminate\Http\Resources\Json\Resource;
+    use Illuminate\Http\Resources\Json\JsonResource;
 
-    class User extends Resource
+    class User extends JsonResource
     {
         /**
          * Transform the resource into an array.
          *
-         * @param  \Illuminate\Http\Request
+         * @param  \Illuminate\Http\Request  $request
          * @return array
          */
         public function toArray($request)
@@ -75,6 +76,7 @@ Every resource class defines a `toArray` method which returns the array of attri
         return new UserResource(User::find(1));
     });
 
+<a name="resource-collections"></a>
 ### Resource Collections
 
 If you are returning a collection of resources or a paginated response, you may use the `collection` method when creating the resource instance in your route or controller:
@@ -86,7 +88,7 @@ If you are returning a collection of resources or a paginated response, you may 
         return UserResource::collection(User::all());
     });
 
-Of course, this does not allow any addition of meta data that may need to be returned with the collection. If you would like to customize the resource collection response, you may create a dedicated resource to represent the collection:
+Note that this does not allow any addition of meta data that may need to be returned with the collection. If you would like to customize the resource collection response, you may create a dedicated resource to represent the collection:
 
     php artisan make:resource UserCollection
 
@@ -103,7 +105,7 @@ Once the resource collection class has been generated, you may easily define any
         /**
          * Transform the resource collection into an array.
          *
-         * @param  \Illuminate\Http\Request
+         * @param  \Illuminate\Http\Request  $request
          * @return array
          */
         public function toArray($request)
@@ -126,6 +128,57 @@ After defining your resource collection, it may be returned from a route or cont
         return new UserCollection(User::all());
     });
 
+#### Preserving Collection Keys
+
+When returning a resource collection from a route, Laravel resets the collection's keys so that they are in simple numerical order. However, you may add a `preserveKeys` property to your resource class indicating if collection keys should be preserved:
+
+    <?php
+
+    namespace App\Http\Resources;
+
+    use Illuminate\Http\Resources\Json\JsonResource;
+
+    class User extends JsonResource
+    {
+        /**
+         * Indicates if the resource's collection keys should be preserved.
+         *
+         * @var bool
+         */
+        public $preserveKeys = true;
+    }
+
+When the `preserveKeys` property is set to `true`, collection keys will be preserved:
+
+    use App\User;
+    use App\Http\Resources\User as UserResource;
+
+    Route::get('/user', function () {
+        return UserResource::collection(User::all()->keyBy->id);
+    });
+
+#### Customizing The Underlying Resource Class
+
+Typically, the `$this->collection` property of a resource collection is automatically populated with the result of mapping each item of the collection to its singular resource class. The singular resource class is assumed to be the collection's class name without the trailing `Collection` string.
+
+For example, `UserCollection` will attempt to map the given user instances into the `User` resource. To customize this behavior, you may override the `$collects` property of your resource collection:
+
+    <?php
+
+    namespace App\Http\Resources;
+
+    use Illuminate\Http\Resources\Json\ResourceCollection;
+
+    class UserCollection extends ResourceCollection
+    {
+        /**
+         * The resource that this resource collects.
+         *
+         * @var string
+         */
+        public $collects = 'App\Http\Resources\Member';
+    }
+
 <a name="writing-resources"></a>
 ## Writing Resources
 
@@ -137,14 +190,14 @@ In essence, resources are simple. They only need to transform a given model into
 
     namespace App\Http\Resources;
 
-    use Illuminate\Http\Resources\Json\Resource;
+    use Illuminate\Http\Resources\Json\JsonResource;
 
-    class User extends Resource
+    class User extends JsonResource
     {
         /**
          * Transform the resource into an array.
          *
-         * @param  \Illuminate\Http\Request
+         * @param  \Illuminate\Http\Request  $request
          * @return array
          */
         public function toArray($request)
@@ -170,12 +223,12 @@ Once a resource has been defined, it may be returned directly from a route or co
 
 #### Relationships
 
-If you would like to include related resources in your response, you may simply add them to the array returned by your `toArray` method. In this example, we will use the `Post` resource's `collection` method to add the user's blog posts to the resource response:
+If you would like to include related resources in your response, you may add them to the array returned by your `toArray` method. In this example, we will use the `Post` resource's `collection` method to add the user's blog posts to the resource response:
 
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request
+     * @param  \Illuminate\Http\Request  $request
      * @return array
      */
     public function toArray($request)
@@ -184,7 +237,7 @@ If you would like to include related resources in your response, you may simply 
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'posts' => Post::collection($this->posts),
+            'posts' => PostResource::collection($this->posts),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
@@ -216,7 +269,7 @@ However, if you need to customize the meta data returned with the collection, it
         /**
          * Transform the resource collection into an array.
          *
-         * @param  \Illuminate\Http\Request
+         * @param  \Illuminate\Http\Request  $request
          * @return array
          */
         public function toArray($request)
@@ -297,7 +350,7 @@ If you would like to disable the wrapping of the outer-most resource, you may us
 
 You have total freedom to determine how your resource's relationships are wrapped. If you would like all resource collections to be wrapped in a `data` key, regardless of their nesting, you should define a resource collection class for each resource and return the collection within a `data` key.
 
-Of course, you may be wondering if this will cause your outer-most resource to be wrapped in two `data` keys. Don't worry, Laravel will never let your resources be accidentally double-wrapped, so you don't have to be concerned about the nesting level of the resource collection you are transforming:
+You may be wondering if this will cause your outer-most resource to be wrapped in two `data` keys. Don't worry, Laravel will never let your resources be accidentally double-wrapped, so you don't have to be concerned about the nesting level of the resource collection you are transforming:
 
     <?php
 
@@ -310,7 +363,7 @@ Of course, you may be wondering if this will cause your outer-most resource to b
         /**
          * Transform the resource collection into an array.
          *
-         * @param  \Illuminate\Http\Request
+         * @param  \Illuminate\Http\Request  $request
          * @return array
          */
         public function toArray($request)
@@ -405,7 +458,7 @@ Sometimes you may wish to only include an attribute in a resource response if a 
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request
+     * @param  \Illuminate\Http\Request  $request
      * @return array
      */
     public function toArray($request)
@@ -414,21 +467,19 @@ Sometimes you may wish to only include an attribute in a resource response if a 
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'secret' => $this->when($this->isAdmin(), 'secret-value'),
+            'secret' => $this->when(Auth::user()->isAdmin(), 'secret-value'),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
     }
 
-In this example, the `secret` key will only be returned in the final resource response if the `$this->isAdmin()` method returns `true`. If the method returns `false`, the `secret` key will be removed from the resource response entirely before it is sent back to the client. The `when` method allows you to expressively define your resources without resorting to conditional statements when building the array.
+In this example, the `secret` key will only be returned in the final resource response if the authenticated user's `isAdmin` method returns `true`. If the method returns `false`, the `secret` key will be removed from the resource response entirely before it is sent back to the client. The `when` method allows you to expressively define your resources without resorting to conditional statements when building the array.
 
 The `when` method also accepts a Closure as its second argument, allowing you to calculate the resulting value only if the given condition is `true`:
 
-    'secret' => $this->when($this->isAdmin(), function () {
+    'secret' => $this->when(Auth::user()->isAdmin(), function () {
         return 'secret-value';
     }),
-
-> {tip} Remember, method calls on resources proxy down to the underlying model instance. So, in this case, the `isAdmin` method is proxying to the underlying Eloquent model that was originally given to the resource.
 
 #### Merging Conditional Attributes
 
@@ -437,7 +488,7 @@ Sometimes you may have several attributes that should only be included in the re
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request
+     * @param  \Illuminate\Http\Request  $request
      * @return array
      */
     public function toArray($request)
@@ -446,7 +497,7 @@ Sometimes you may have several attributes that should only be included in the re
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            $this->mergeWhen($this->isAdmin(), [
+            $this->mergeWhen(Auth::user()->isAdmin(), [
                 'first-secret' => 'value',
                 'second-secret' => 'value',
             ]),
@@ -469,7 +520,7 @@ Ultimately, this makes it easier to avoid "N+1" query problems within your resou
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request
+     * @param  \Illuminate\Http\Request  $request
      * @return array
      */
     public function toArray($request)
@@ -478,7 +529,7 @@ Ultimately, this makes it easier to avoid "N+1" query problems within your resou
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'posts' => Post::collection($this->whenLoaded('posts')),
+            'posts' => PostResource::collection($this->whenLoaded('posts')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
@@ -493,7 +544,7 @@ In addition to conditionally including relationship information in your resource
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request
+     * @param  \Illuminate\Http\Request  $request
      * @return array
      */
     public function toArray($request)
@@ -501,8 +552,27 @@ In addition to conditionally including relationship information in your resource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'expires_at' => $this->whenPivotLoaded('role_users', function () {
+            'expires_at' => $this->whenPivotLoaded('role_user', function () {
                 return $this->pivot->expires_at;
+            }),
+        ];
+    }
+
+If your intermediate table is using an accessor other than `pivot`, you may use the `whenPivotLoadedAs` method:
+
+    /**
+     * Transform the resource into an array.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
+    public function toArray($request)
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'expires_at' => $this->whenPivotLoadedAs('subscription', 'role_user', function () {
+                return $this->subscription->expires_at;
             }),
         ];
     }
@@ -510,12 +580,12 @@ In addition to conditionally including relationship information in your resource
 <a name="adding-meta-data"></a>
 ### Adding Meta Data
 
-Some JSON API standards require the addition of meta data to your resource and resource collections responses. This often includes things like `links` to the resource or related resources, or meta data about the resource itself. If you need to return additional meta data about a resource, simply include it in your `toArray` method. For example, you might include `link` information when transforming a resource collection:
+Some JSON API standards require the addition of meta data to your resource and resource collections responses. This often includes things like `links` to the resource or related resources, or meta data about the resource itself. If you need to return additional meta data about a resource, include it in your `toArray` method. For example, you might include `link` information when transforming a resource collection:
 
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request
+     * @param  \Illuminate\Http\Request  $request
      * @return array
      */
     public function toArray($request)
@@ -528,7 +598,7 @@ Some JSON API standards require the addition of meta data to your resource and r
         ];
     }
 
-When returning additional meta data from your resources, you never have to worry about accidentally overriding the `links` or `meta` keys that are automatically added by Laravel when returning paginated responses. Any additional `links` you define will simply be merged with the links provided by the paginator.
+When returning additional meta data from your resources, you never have to worry about accidentally overriding the `links` or `meta` keys that are automatically added by Laravel when returning paginated responses. Any additional `links` you define will be merged with the links provided by the paginator.
 
 #### Top Level Meta Data
 
@@ -545,7 +615,7 @@ Sometimes you may wish to only include certain meta data with a resource respons
         /**
          * Transform the resource collection into an array.
          *
-         * @param  \Illuminate\Http\Request
+         * @param  \Illuminate\Http\Request  $request
          * @return array
          */
         public function toArray($request)
@@ -556,7 +626,7 @@ Sometimes you may wish to only include certain meta data with a resource respons
         /**
          * Get additional data that should be returned with the resource array.
          *
-         * @param \Illuminate\Http\Request  $request
+         * @param  \Illuminate\Http\Request  $request
          * @return array
          */
         public function with($request)
@@ -607,14 +677,14 @@ Alternatively, you may define a `withResponse` method within the resource itself
 
     namespace App\Http\Resources;
 
-    use Illuminate\Http\Resources\Json\Resource;
+    use Illuminate\Http\Resources\Json\JsonResource;
 
-    class User extends Resource
+    class User extends JsonResource
     {
         /**
          * Transform the resource into an array.
          *
-         * @param  \Illuminate\Http\Request
+         * @param  \Illuminate\Http\Request  $request
          * @return array
          */
         public function toArray($request)
@@ -627,8 +697,8 @@ Alternatively, you may define a `withResponse` method within the resource itself
         /**
          * Customize the outgoing response for the resource.
          *
-         * @param  \Illuminate\Http\Request
-         * @param  \Illuminate\Http\Response
+         * @param  \Illuminate\Http\Request  $request
+         * @param  \Illuminate\Http\Response  $response
          * @return void
          */
         public function withResponse($request, $response)

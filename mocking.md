@@ -1,8 +1,10 @@
 # Mocking
 
 - [Introduction](#introduction)
+- [Mocking Objects](#mocking-objects)
 - [Bus Fake](#bus-fake)
 - [Event Fake](#event-fake)
+    - [Scoped Event Fakes](#scoped-event-fakes)
 - [Mail Fake](#mail-fake)
 - [Notification Fake](#notification-fake)
 - [Queue Fake](#queue-fake)
@@ -14,7 +16,27 @@
 
 When testing Laravel applications, you may wish to "mock" certain aspects of your application so they are not actually executed during a given test. For example, when testing a controller that dispatches an event, you may wish to mock the event listeners so they are not actually executed during the test. This allows you to only test the controller's HTTP response without worrying about the execution of the event listeners, since the event listeners can be tested in their own test case.
 
-Laravel provides helpers for mocking events, jobs, and facades out of the box. These helpers primarily provide a convenience layer over Mockery so you do not have to manually make complicated Mockery method calls. Of course, you are free to use [Mockery](http://docs.mockery.io/en/latest/) or PHPUnit to create your own mocks or spies.
+Laravel provides helpers for mocking events, jobs, and facades out of the box. These helpers primarily provide a convenience layer over Mockery so you do not have to manually make complicated Mockery method calls. You can also use [Mockery](http://docs.mockery.io/en/latest/) or PHPUnit to create your own mocks or spies.
+
+<a name="mocking-objects"></a>
+## Mocking Objects
+
+When mocking an object that is going to be injected into your application via Laravel's service container, you will need to bind your mocked instance into the container as an `instance` binding. This will instruct the container to use your mocked instance of the object instead of constructing the object itself:
+
+    use Mockery;
+    use App\Service;
+
+    $this->instance(Service::class, Mockery::mock(Service::class, function ($mock) {
+        $mock->shouldReceive('process')->once();
+    }));
+
+In order to make this more convenient, you may use the `mock` method, which is provided by Laravel's base test case class:
+
+    use App\Service;
+
+    $this->mock(Service::class, function ($mock) {
+        $mock->shouldReceive('process')->once();
+    });
 
 <a name="bus-fake"></a>
 ## Bus Fake
@@ -79,7 +101,70 @@ As an alternative to mocking, you may use the `Event` facade's `fake` method to 
                 return $e->order->id === $order->id;
             });
 
+            // Assert an event was dispatched twice...
+            Event::assertDispatched(OrderShipped::class, 2);
+
+            // Assert an event was not dispatched...
             Event::assertNotDispatched(OrderFailedToShip::class);
+        }
+    }
+
+> {note} After calling `Event::fake()`, no event listeners will be executed. So, if your tests use model factories that rely on events, such as creating a UUID during a model's `creating` event, you should call `Event::fake()` **after** using your factories.
+
+#### Faking A Subset Of Events
+
+If you only want to fake event listeners for a specific set of events, you may pass them to the `fake` or `fakeFor` method:
+
+    /**
+     * Test order process.
+     */
+    public function testOrderProcess()
+    {
+        Event::fake([
+            OrderCreated::class,
+        ]);
+
+        $order = factory(Order::class)->create();
+
+        Event::assertDispatched(OrderCreated::class);
+
+        // Other events are dispatched as normal...
+        $order->update([...]);
+    }
+
+<a name="scoped-event-fakes"></a>
+### Scoped Event Fakes
+
+If you only want to fake event listeners for a portion of your test, you may use the `fakeFor` method:
+
+    <?php
+
+    namespace Tests\Feature;
+
+    use App\Order;
+    use Tests\TestCase;
+    use App\Events\OrderCreated;
+    use Illuminate\Support\Facades\Event;
+    use Illuminate\Foundation\Testing\RefreshDatabase;
+    use Illuminate\Foundation\Testing\WithoutMiddleware;
+
+    class ExampleTest extends TestCase
+    {
+        /**
+         * Test order process.
+         */
+        public function testOrderProcess()
+        {
+            $order = Event::fakeFor(function () {
+                $order = factory(Order::class)->create();
+
+                Event::assertDispatched(OrderCreated::class);
+
+                return $order;
+            });
+
+            // Events are dispatched as normal and observers will run ...
+            $order->update([...]);
         }
     }
 
@@ -103,6 +188,9 @@ You may use the `Mail` facade's `fake` method to prevent mail from being sent. Y
         public function testOrderShipping()
         {
             Mail::fake();
+
+            // Assert that no mailables were sent...
+            Mail::assertNothingSent();
 
             // Perform order shipping...
 
@@ -142,6 +230,7 @@ You may use the `Notification` facade's `fake` method to prevent notifications f
     use Tests\TestCase;
     use App\Notifications\OrderShipped;
     use Illuminate\Support\Facades\Notification;
+    use Illuminate\Notifications\AnonymousNotifiable;
     use Illuminate\Foundation\Testing\RefreshDatabase;
     use Illuminate\Foundation\Testing\WithoutMiddleware;
 
@@ -150,6 +239,9 @@ You may use the `Notification` facade's `fake` method to prevent notifications f
         public function testOrderShipping()
         {
             Notification::fake();
+
+            // Assert that no notifications were sent...
+            Notification::assertNothingSent();
 
             // Perform order shipping...
 
@@ -169,6 +261,11 @@ You may use the `Notification` facade's `fake` method to prevent notifications f
             // Assert a notification was not sent...
             Notification::assertNotSentTo(
                 [$user], AnotherNotification::class
+            );
+
+            // Assert a notification was sent via Notification::route() method...
+            Notification::assertSentTo(
+                new AnonymousNotifiable, OrderShipped::class
             );
         }
     }
@@ -194,6 +291,9 @@ As an alternative to mocking, you may use the `Queue` facade's `fake` method to 
         {
             Queue::fake();
 
+            // Assert that no jobs were pushed...
+            Queue::assertNothingPushed();
+
             // Perform order shipping...
 
             Queue::assertPushed(ShipOrder::class, function ($job) use ($order) {
@@ -208,6 +308,12 @@ As an alternative to mocking, you may use the `Queue` facade's `fake` method to 
 
             // Assert a job was not pushed...
             Queue::assertNotPushed(AnotherJob::class);
+
+            // Assert a job was pushed with a specific chain...
+            Queue::assertPushedWithChain(ShipOrder::class, [
+                AnotherJob::class,
+                FinalJob::class
+            ]);
         }
     }
 
@@ -298,4 +404,4 @@ We can mock the call to the `Cache` facade by using the `shouldReceive` method, 
         }
     }
 
-> {note} You should not mock the `Request` facade. Instead, pass the input you desire into the HTTP helper methods such as `get` and `post` when running your test. Likewise, instead of mocking the `Config` facade, simply call the `Config::set` method in your tests.
+> {note} You should not mock the `Request` facade. Instead, pass the input you desire into the HTTP helper methods such as `get` and `post` when running your test. Likewise, instead of mocking the `Config` facade, call the `Config::set` method in your tests.
