@@ -183,3 +183,20 @@ $documents = DB::table('documents')
     ->limit(10)
     ->get();
 ```
+
+<a name="image-manipulation"></a>
+### Image Manipulation
+
+Laravel 13 includes a first-party, fluent [image manipulation](/docs/{{version}}/images) API powered by [Intervention Image](https://image.intervention.io/), supporting the GD and Imagick extensions:
+
+```php
+use Illuminate\Support\Facades\Image;
+
+$path = Image::fromStorage('avatars/photo.jpg', 'public')
+    ->cover(400, 400)
+    ->toWebp()
+    ->storePublicly('avatars', 'public');
+```
+
+> [!WARNING]
+> The image configuration file was named `config/image.php` when these features were first released and was later renamed to `config/images.php`. If you published the configuration file before it was renamed, you should rename it in your application, otherwise your configuration will be ignored.
