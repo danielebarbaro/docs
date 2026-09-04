@@ -63,6 +63,9 @@ The image configuration file allows you to specify your application's default im
 IMAGE_DRIVER=imagick
 ```
 
+> [!WARNING]
+> This configuration file was named `config/image.php` when the image manipulation features were first released. If you published the configuration file before it was renamed, you should rename it to `config/images.php`, otherwise your configuration will be ignored and the default `gd` driver will be used.
+
 <a name="reading-images"></a>
 ## Reading Images
 
